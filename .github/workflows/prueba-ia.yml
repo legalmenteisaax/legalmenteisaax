@@ -1,0 +1,17 @@
+name: prueba-ia
+on: [workflow_dispatch, push]
+permissions:
+  contents: read
+  models: read
+jobs:
+  probar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probar variantes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          B='{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"di hola"}],"max_tokens":20}'
+          echo "== A sin accept"; curl -s -w ' [%{http_code} %{content_type}]\n' https://models.github.ai/inference/chat/completions -H "Content-Type: application/json" -H "Authorization: Bearer $GITHUB_TOKEN" -d "$B" | head -c 400; echo
+          echo "== B con accept"; curl -s -w ' [%{http_code} %{content_type}]\n' https://models.github.ai/inference/chat/completions -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" -H "Content-Type: application/json" -H "Authorization: Bearer $GITHUB_TOKEN" -d "$B" | head -c 400; echo
+          echo "== C catalogo"; curl -s -w ' [%{http_code}]\n' https://models.github.ai/catalog/models -H "Authorization: Bearer $GITHUB_TOKEN" | head -c 300; echo
