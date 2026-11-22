@@ -395,14 +395,15 @@ async function datosReales() {
   let repos = [], pagina = 1;
   while (true) {
     const url = privado
-      ? `/user/repos?per_page=100&affiliation=owner&page=${pagina}`
+      ? `/user/repos?per_page=100&visibility=all&affiliation=owner,collaborator&page=${pagina}`
       : `/users/${USUARIO}/repos?per_page=100&type=owner&page=${pagina}`;
     const lote = await gh(url);
     repos.push(...lote);
     if (lote.length < 100) break;
     pagina++;
   }
-  repos = repos.filter((r) => !r.fork && r.name !== USUARIO);
+  console.log(`Repos visibles: ${repos.length} (privados: ${repos.filter((r) => r.private).length}, forks: ${repos.filter((r) => r.fork).length}).`);
+  repos = repos.filter((r) => !r.fork && r.name !== USUARIO && r.owner?.login === USUARIO);
   const bytes = {};
   for (const r of repos) {
     const l = await gh(`/repos/${r.full_name}/languages`);
