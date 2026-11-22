@@ -174,14 +174,24 @@ ${i < filas.length - 1 ? `<line x1="40" x2="${W - 40}" y1="${y + 17}" y2="${y + 
 
 // ---------- 3. Ciudad 3D de contribuciones ----------
 function ciudad(datos) {
-  const { semanas, total, ultimoAnio, rachaActual, rachaMax } = datos;
+  const { total, ultimoAnio, rachaActual, rachaMax } = datos;
+  // Recorta las semanas vacías del inicio (mínimo 20 semanas visibles) para que la ciudad llene la tarjeta
+  const primera = datos.semanas.findIndex((s) => s.some((d) => d.n > 0));
+  const desde = primera < 0 ? 0 : Math.max(0, Math.min(primera - 1, datos.semanas.length - 20));
+  const semanas = datos.semanas.slice(desde);
   const ALTO = 560;
-  const u = { x: 13.6, y: 3.6 };   // eje semanas
-  const v = { x: -10.5, y: 8.2 };  // eje días
-  const LLENO = 0.86;
   const nS = semanas.length;
+  const base = { u: { x: 13.6, y: 3.6 }, v: { x: -10.5, y: 8.2 } };
+  const anchoBase = nS * base.u.x - 7 * base.v.x;
+  const altoBase = nS * base.u.y + 7 * base.v.y;
+  let k = Math.min(2.0, (W - 120) / anchoBase);
+  const hMax = 58 * Math.min(k, 1.4);
+  k = Math.min(k, (300 - hMax) / altoBase);
+  const u = { x: base.u.x * k, y: base.u.y * k };   // eje semanas
+  const v = { x: base.v.x * k, y: base.v.y * k };   // eje días
+  const LLENO = 0.86;
   const maximo = Math.max(1, ...semanas.flat().map((d) => d.n));
-  const altura = (n) => (n === 0 ? 2.5 : 5 + 58 * Math.sqrt(n / maximo));
+  const altura = (n) => (n === 0 ? 2.5 : 5 + hMax * Math.sqrt(n / maximo));
 
   // centrar la rejilla
   const xs = [], ys = [];
@@ -216,7 +226,7 @@ function ciudad(datos) {
     const cTop = col || C.tarjeta2;
     const cIzq = col ? oscurecer(col, 0.62) : "#15171a";
     const cDer = col ? oscurecer(col, 0.42) : "#101214";
-    const retardo = (0.25 + a * 0.028 + b * 0.05).toFixed(3);
+    const retardo = (0.25 + a * (1.5 / nS) + b * 0.05).toFixed(3);
     edificios += `<g class="ed" style="animation-delay:${retardo}s">` +
       `<polygon points="${pts([q3, q2, arr(q2), arr(q3)])}" fill="${cIzq}"/>` +
       `<polygon points="${pts([q1, q2, arr(q2), arr(q1)])}" fill="${cDer}"/>` +
@@ -238,7 +248,7 @@ function ciudad(datos) {
     const cx = (p.x + q.x) / 2, cy = Math.min(p.y, q.y) - 26 - Math.abs(p.y - q.y) * 0.35;
     d += ` Q${cx.toFixed(1)},${cy.toFixed(1)} ${q.x.toFixed(1)},${q.y.toFixed(1)}`;
   }
-  const INICIO = 2.6, DUR = (ruta.length * 0.5 * 2).toFixed(1);
+  const INICIO = 2.6, DUR = Math.max(12, ruta.length * 0.6 * 2).toFixed(1);
   // Personaje: cubito naranja con ojos (como el ¡x del logo, en versión bloque)
   const s = 9;
   const cubo = `
@@ -262,7 +272,7 @@ function ciudad(datos) {
     if (!f) return;
     const mes = new Date(f + "T12:00:00Z").getUTCMonth();
     if (mes !== ultimoMes && a > 0 && a < nS - 1) {
-      const p = P(a + 0.5, 7.9);
+      const p = P(a + 0.5, 7.25);
       meses += texto(mesesNom[mes], { x: p.x, y: p.y + 12, tam: 11, peso: 700, color: C.mutedOscuro, ancla: "middle" });
     }
     ultimoMes = mes;
@@ -298,6 +308,10 @@ ${saltador}`;
 
 // ---------- 4. Lenguajes: una dona por lenguaje ----------
 function lenguajes(lista) {
+  if (!lista.length) {
+    const contenido = texto("Analizando repositorios…", { x: W / 2, y: 140, tam: 18, peso: 600, color: C.muted, ancla: "middle" });
+    return tarjeta({ alto: 200, izq: "Lenguajes", der: "Más usados", contenido, mancha: false });
+  }
   const top = lista.slice(0, 8);
   const porFila = 4, R = 46, TRAZO = 11;
   const filas = Math.max(1, Math.ceil(top.length / porFila));
